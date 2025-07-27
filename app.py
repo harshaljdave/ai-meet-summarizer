@@ -1,8 +1,6 @@
-
-
 import streamlit as st
 import pandas as pd
-from core_logic import process_transcript, load_meetings, export_to_slack
+from corelogic import process_transcript, load_meetings, export_to_slack
 
 
 st.set_page_config(
