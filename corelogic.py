@@ -8,7 +8,6 @@ import google.generativeai as genai
 # --- Configuration ---
 try:
     genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-    # genai.configure(api_key="AIzaSyDMeck3PnM3ZN3G8r5ndMyuSraZz4ptIhA")
 except KeyError:
     print("🚨 Error: GEMINI_API_KEY environment variable not set!")
 
@@ -58,7 +57,6 @@ def export_to_slack(meeting_data: dict):
     """Formats meeting data and sends it to a Slack channel via webhook."""
     try:
         webhook_url = os.environ["SLACK_WEBHOOK_URL"]
-        # webhook_url = "https://hooks.slack.com/services/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"
     except KeyError:
         print("🚨 Error: SLACK_WEBHOOK_URL environment variable not set!")
         print("   Skipping Slack export.")
