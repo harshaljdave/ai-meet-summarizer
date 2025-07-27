@@ -1,109 +1,129 @@
 import streamlit as st
 import pandas as pd
-from corelogic import process_transcript, load_meetings, export_to_slack
-import base64 # Needed to decode the transcript
+import json
+import base64
+from supabase import create_client, Client
+import corelogic
+from datetime import datetime
+st.set_page_config(page_title="AI Meeting Summarizer", layout="wide")
 
-# --- Add this block to your Streamlit app ---
-# Check for transcript data in the URL query parameters
-params = st.query_params
-url_transcript = params.get("transcript", "")
+@st.cache_resource
+def init_connection() -> Client:
+    url = st.secrets["SUPABASE_URL"]
+    key = st.secrets["SUPABASE_KEY"]
+    return create_client(url, key)
 
-# The transcript will be Base64 encoded, so we need to decode it
-if url_transcript:
-    try:
-        decoded_bytes = base64.b64decode(url_transcript)
-        url_transcript = decoded_bytes.decode('utf-8')
-    except Exception as e:
-        st.error(f"Could not decode transcript from URL: {e}")
-        url_transcript = ""
-# ---------------------------------------------
+supabase = init_connection()
 
-# In your st.text_area, use the decoded transcript as the default value
-transcript_input = st.text_area(
-    "Paste your meeting transcript here, or send it from the Chrome Extension.",
-    value=url_transcript, # This pre-fills the text area
-    height=250
-)
+# --- ROBUST SESSION MANAGEMENT ---
+# This block is the key to fixing the issue.
+# On every script rerun, it checks for a session in st.session_state and
+# re-authenticates the supabase client if one is found.
+if "user_session" not in st.session_state:
+    st.session_state.user_session = None
 
-
-st.set_page_config(
-    page_title="AI Meeting Summarizer",
-    layout="wide",
-)
-
-
-def display_meeting_results(results):
-    """A reusable function to display summary and action items."""
-    st.markdown(f" Summary")
-    st.write(results["summary"])
-
-    st.markdown("  Action Items")
-    if results["action_items"]:
-        df = pd.DataFrame(results["action_items"])
-        st.data_editor(
-            df,
-            column_config={"completed": st.column_config.CheckboxColumn("Completed?", default=False)},
-            hide_index=True,
-            use_container_width=True
-        )
-    else:
-        st.write("No action items were identified.")
-    
-  
-    st.divider()
-    if st.button(" Send to Slack"):
-        with st.spinner("Sending to Slack..."):
-            if export_to_slack(results):
-                st.toast(" Successfully sent to Slack!")
-            else:
-                st.error(" Failed to send to Slack.")
-
-
-with st.sidebar:
-    st.title(" AI Meeting Summarizer")
-    page = st.radio("Navigation", ["New Meeting", "History"], label_visibility="hidden")
-
-
-if page == "New Meeting":
-    st.title("Process a New Meeting")
-
-    st.subheader("1. Paste Your Meeting Transcript")
-    transcript_text = st.text_area(
-        "Transcript Input", height=250, placeholder="Paste the full meeting transcript here...", label_visibility="collapsed"
+# If a session exists in the state, tell the supabase client to use it
+if st.session_state.user_session:
+    supabase.auth.set_session(
+        st.session_state.user_session.access_token,
+        st.session_state.user_session.refresh_token
     )
 
-    if st.button("Process Meeting", type="primary"):
-        if transcript_text:
-            with st.spinner("AI is summarizing, please wait..."):
-                results = process_transcript(transcript_text)
-                st.session_state["results"] = results
-                
-        else:
-            st.warning("Please paste a transcript before processing.")
-    
+# ... (The display_meeting_results function remains the same as before) ...
+def display_meeting_results(results):
+    st.markdown("### Summary")
+    st.write(results.get("summary", "No summary available."))
+    st.markdown("### Action Items")
+    action_items_raw = results.get("action_items", [])
+    action_items = json.loads(action_items_raw) if isinstance(action_items_raw, str) else action_items_raw
+    if action_items:
+        st.data_editor(pd.DataFrame(action_items), hide_index=True, use_container_width=True)
+    else:
+        st.write("No action items identified.")
     st.divider()
-    st.subheader("2. Review Your Results")
+    if st.button("Send to Slack", key=f"slack_{results.get('id', 'new')}_btn"):
+        with st.spinner("Sending to Slack..."):
+            corelogic.export_to_slack(results)
 
-    if "results" in st.session_state and st.session_state["results"]:
-        display_meeting_results(st.session_state["results"])
-    else:
-        st.write("Your summary and action items will appear here once processed.")
+# --- APP LAYOUT ---
+# If user is not logged in, show the login/signup page.
+if st.session_state.user_session is None:
+    st.title("🤖 AI Meeting Summarizer")
+    st.header("Welcome! Please log in to continue.")
+    login_tab, signup_tab = st.tabs(["Login", "Sign Up"])
+    with login_tab:
+        with st.form("login_form"):
+            email = st.text_input("Email")
+            password = st.text_input("Password", type="password")
+            if st.form_submit_button("Login", use_container_width=True):
+                try:
+                    # Sign in and save the session object to the state
+                    session = supabase.auth.sign_in_with_password({"email": email, "password": password})
+                    st.session_state.user_session = session.session
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Login failed: {e}")
+    # ... (Signup tab remains the same) ...
+    with signup_tab:
+        with st.form("signup_form"):
+            email = st.text_input("Choose an Email")
+            password = st.text_input("Choose a Password", type="password")
+            if st.form_submit_button("Sign Up", use_container_width=True):
+                try:
+                    supabase.auth.sign_up({"email": email, "password": password})
+                    st.success("Signup successful! Please log in.")
+                except Exception as e:
+                    st.error(f"Signup failed: {e}")
+else:
+    # --- LOGGED-IN USER INTERFACE ---
+    user_id = st.session_state.user_session.user.id
+    with st.sidebar:
+        st.title("🤖 AI Meeting Summarizer")
+        st.write(f"Welcome, {st.session_state.user_session.user.email}")
+        if st.button("Sign Out", use_container_width=True):
+            supabase.auth.sign_out()
+            st.session_state.user_session = None
+            st.rerun()
+        st.divider()
+        page = st.radio("Navigation", ["New Meeting", "History"], label_visibility="collapsed")
 
-
-elif page == "History":
-    st.title("📖 Meeting History")
-    
-    meetings = load_meetings()
-    
-    if not meetings:
-        st.write("No past meetings found.")
-    else:
-       
-        meeting_ids = [m["id"] for m in meetings]
-        selected_id = st.selectbox("Select a past meeting to view:", meeting_ids)
-        
-     
-        selected_meeting = next((m for m in meetings if m["id"] == selected_id), None)
-
-        if selected_meeting:
-            display_meeting_results(selected_meeting)
+    # ... (The rest of the app logic for "New Meeting" and "History" pages remains the same) ...
+    if page == "New Meeting":
+        st.title("Process a New Meeting")
+        params = st.query_params
+        url_transcript = params.get("transcript", "")
+        if url_transcript:
+            try:
+                url_transcript = base64.b64decode(url_transcript).decode('utf-8')
+            except Exception:
+                st.error("Could not decode transcript from URL.")
+                url_transcript = ""
+        transcript_text = st.text_area("Paste your transcript here...", value=url_transcript, height=300, label_visibility="collapsed")
+        if st.button("Process Meeting", type="primary", use_container_width=True):
+            if transcript_text.strip():
+                with st.spinner("AI is summarizing..."):
+                    results = corelogic.process_transcript(transcript_text)
+                    if results:
+                        corelogic.save_meeting(supabase, user_id, transcript_text, results)
+                        st.session_state["results"] = results
+            else:
+                st.warning("Please paste a transcript before processing.")
+        st.divider()
+        st.subheader("Your Results")
+        if "results" in st.session_state and st.session_state["results"]:
+            display_meeting_results(st.session_state["results"])
+        else:
+            st.info("Your summary and action items will appear here once processed.")
+    elif page == "History":
+        st.title("📖 Meeting History")
+        meetings = corelogic.load_meetings(supabase, user_id)
+        if not meetings:
+            st.info("No past meetings found.")
+        else:
+            meeting_options = {f"Meeting from {datetime.fromisoformat(m['created_at']).strftime('%Y-%m-%d %H:%M')}": m['id'] for m in meetings}
+            selected_option = st.selectbox("Select a past meeting to view:", options=meeting_options.keys())
+            if selected_option:
+                selected_id = meeting_options[selected_option]
+                selected_meeting = next((m for m in meetings if m["id"] == selected_id), None)
+                if selected_meeting:
+                    display_meeting_results(selected_meeting)
