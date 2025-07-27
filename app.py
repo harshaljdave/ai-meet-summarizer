@@ -1,6 +1,29 @@
 import streamlit as st
 import pandas as pd
 from corelogic import process_transcript, load_meetings, export_to_slack
+import base64 # Needed to decode the transcript
+
+# --- Add this block to your Streamlit app ---
+# Check for transcript data in the URL query parameters
+params = st.query_params
+url_transcript = params.get("transcript", "")
+
+# The transcript will be Base64 encoded, so we need to decode it
+if url_transcript:
+    try:
+        decoded_bytes = base64.b64decode(url_transcript)
+        url_transcript = decoded_bytes.decode('utf-8')
+    except Exception as e:
+        st.error(f"Could not decode transcript from URL: {e}")
+        url_transcript = ""
+# ---------------------------------------------
+
+# In your st.text_area, use the decoded transcript as the default value
+transcript_input = st.text_area(
+    "Paste your meeting transcript here, or send it from the Chrome Extension.",
+    value=url_transcript, # This pre-fills the text area
+    height=250
+)
 
 
 st.set_page_config(
