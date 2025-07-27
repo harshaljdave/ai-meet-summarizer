@@ -4,7 +4,7 @@ from datetime import datetime
 import uuid
 import requests # Import the requests library
 import google.generativeai as genai
-
+import streamlit as st
 # --- Configuration ---
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
