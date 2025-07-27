@@ -2,3 +2,4 @@ streamlit
 streamlit-lottie
 google-generativeai
 pandas
+supabase
