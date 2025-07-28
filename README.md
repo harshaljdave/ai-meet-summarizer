@@ -1,39 +1,75 @@
 # 🤖 AI Meeting Summarizer
 
-A hackathon project that transforms raw meeting transcripts into concise summaries and actionable tasks using the Google Gemini API and Streamlit.
+A full-stack application that transforms messy meeting conversations into structured summaries and actionable tasks. This project combines a powerful AI backend with a user-friendly web interface and a companion Chrome Extension to capture live meeting captions.
 
-## ✨ Features
+---
 
-- **AI-Powered Summaries:** Instantly get a summary of your meeting.
-- **Action Item Extraction:** Automatically pulls out tasks, assignees, and deadlines.
-- **Meeting History:** View and manage past analyses.
-- **Slack Integration:** Export key results directly to your Slack channel.
+### ## 🚀 Live Demo
 
-## 🛠️ Tech Stack
+[**Launch the Web App Here!**](https://your-app.streamlit.app/) *(Replace with your actual Streamlit app URL)*
+### Username : p24cs012@coed.svnit.ac.in
+### password : qwerty
+---
 
-- **Framework:** Streamlit
-- **Language:** Python
-- **LLM:** Google Gemini API
+### ## ✨ Key Features
 
-## 🚀 Setup and Run
+- **AI-Powered Analysis:** Uses the Google Gemini API to generate concise, human-like summaries and extract key action items.
+- **Secure User Accounts:** Full user authentication system powered by Supabase, ensuring each user's meeting history is private and secure.
+- **Live Caption Scraping:** A companion Chrome Extension that captures live captions directly from Google Meet, eliminating the need for audio files.
+- **Persistent History:** All meeting analyses are saved to a cloud database, allowing users to review their history at any time.
+- **Interactive UI:** A clean interface built with Streamlit, featuring an interactive data editor for action items.
+- **Slack Integration:** Send meeting summaries and tasks directly to a Slack channel with a single click.
+
+---
+
+### ## 🛠️ Tech Stack
+
+- **Web Framework:** Streamlit
+- **Database & Authentication:** Supabase
+- **AI Model:** Google Gemini Pro
+- **Chrome Extension:** JavaScript, HTML, CSS (Manifest V3)
+- **Deployment:** Streamlit Community Cloud
+
+---
+
+### ## ⚙️ Setup and Installation
+
+This project has two parts: the Streamlit web app and the Chrome Extension.
+
+### ### 1. Web App Setup
 
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/harshaljdave/ai-meeting-summarizer.git](https://github.com/harshaljdave/ai-meeting-summarizer.git)
-    cd ai-meeting-summarizer
+    git clone [https://github.com/harshaljdave/ai-meet-summarizer.git](https://github.com/harshaljdave/ai-meet-summarizer.git)
+    cd ai-meet-summarizer
     ```
+
 2.  **Create a virtual environment and install dependencies:**
     ```bash
     python -m venv venv
     source venv/bin/activate  # On Windows use `venv\Scripts\activate`
     pip install -r requirements.txt
     ```
-3.  **Set your API Key:**
-    ```bash
-    Linux/Mac: export GEMINI_API_KEY='YOUR_API_KEY_HERE'
-    windows : set GEMINI_API_KEY='YOUR_API_KEY_HERE'
-    ```
-4.  **Run the app:**
+
+3.  **Set up local secrets:**
+    * Create a file at `.streamlit/secrets.toml`.
+    * Add your API keys and credentials:
+        ```toml
+        GEMINI_API_KEY = "YOUR_GEMINI_KEY_HERE"
+        SLACK_WEBHOOK_URL = "YOUR_SLACK_WEBHOOK_URL_HERE"
+        SUPABASE_URL = "YOUR_SUPABASE_PROJECT_URL"
+        SUPABASE_KEY = "YOUR_SUPABASE_ANON_KEY"
+        ```
+
+4.  **Run the app locally:**
     ```bash
     streamlit run app.py
     ```
+
+### ### 2. Chrome Extension Setup
+
+1.  **Open Chrome and navigate to `chrome://extensions`.**
+2.  **Enable "Developer mode"** using the toggle in the top-right corner.
+3.  Click the **"Load unpacked"** button.
+4.  Select the `chrome-extension` folder from the cloned repository.
+5.  Pin the extension to your toolbar for easy access.
