@@ -32,9 +32,23 @@ A full-stack application that transforms messy meeting conversations into struct
 
 ---
 
+### ## How It Works
+
+Our application streamlines the process of analyzing meetings into a simple, three-step workflow, moving from live conversation to actionable insights without manual note-taking.
+
+1.  **Capture with the Chrome Extension** 📝
+    While in a Google Meet call, the user enables the built-in live captions. Our companion Chrome Extension runs securely in the background, scraping these captions in real-time to build a complete, accurate transcript of the conversation.
+
+2.  **Analyze in the Web App** 🧠
+    With a single click, the captured transcript is sent from the extension to our Streamlit web app. The user logs into their secure account, and the AI engine—powered by the Google Gemini API—processes the text to generate a concise summary and a structured list of action items, automatically identifying owners and deadlines.
+
+3.  **Review and Act** 🚀
+    The results are instantly displayed and saved permanently to the user's private meeting history, powered by a Supabase database. The user can review past meetings, ask questions about their entire history using our RAG-powered chat, or export key results to Slack to keep their team aligned and accountable.
 ### ## ⚙️ Setup and Installation
 
 This project has two parts: the Streamlit web app and the Chrome Extension.
+
+---
 
 ### ### 1. Web App Setup
 
